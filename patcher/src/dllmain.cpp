@@ -14,17 +14,6 @@
 
 #ifdef _WIN64
 
-extern "C" uint64_t read_reg_rax();
-extern "C" uint64_t read_reg_rsp();
-extern "C" uint64_t get_correct_rbp();
-extern "C" uint64_t read_reg_rcx();
-extern "C" uint64_t read_reg_rdx();
-extern "C" uint64_t read_reg_rbx();
-
-extern "C" uint64_t backup_rax();
-extern "C" uint64_t backup_rcx();
-extern "C" void backup_rest(void*);
-
 extern "C" void do_thing();
 extern "C" void hook_decrypt_func_on_keyload();
 extern "C" void hook_decrypt_func_under_xor();
@@ -142,39 +131,6 @@ void WriteAbsoluteJump64(void* absJumpMemory, void* addrToJumpTo)
     memcpy(absJumpMemory, absJumpInstructions, sizeof(absJumpInstructions));
 }
 
-int doNothing() {
-
-
-    uint64_t rax = backup_rax();
-    uint64_t rcx = backup_rcx();
-    uint64_t dat[10];
-    backup_rest(dat);
-
-    
-
-    //uint64_t _rax = read_reg_rax();
-
-    //uint32_t input_key_1 = read_reg_rcx() & 0xFFFFFFFF;
-    //uint32_t input_key_2 = read_reg_rdx() & 0xFFFFFFFF;
-
-    ofp = fopen("hooking_log.txt", "wb");
-    fprintf(ofp, "hooked function called!\n");
-
-    //load stuff
-    //fprintf(ofp, "rax %016llx\n", _rax);
-    //fprintf(ofp, "rcx %08lx, rdx %08lx\n", input_key_1, input_key_2);
-    fprintf(ofp, "rax %016llx, rcx %016llx\n", rax, rcx);
-    //fprintf(ofp, "rest: %016llx %016llx\n", dat[0], dat[1]);
-
-    FILE* oofp = fopen("dump.bin", "wb");
-    //fwrite((const void*)_rax, 1, 0xFFFF, oofp);
-    fclose(oofp);
-
-
-    fclose(ofp);
-    return 0;
-}
-
 void InstallHook(void* targetFunction, void* payloadFunction, uint64_t* returnAddr)
 {
     uint64_t functionRVA = chosen_RVA;
@@ -184,7 +140,6 @@ void InstallHook(void* targetFunction, void* payloadFunction, uint64_t* returnAd
     void* relayFuncMemory = AllocatePageNearAddress(func2hook);
     WriteAbsoluteJump64(relayFuncMemory, payloadFunction); //write relay func instructions
 
-    //*returnAddr = ((long long)func2hook) + 5;
     write_new_ret_addr(((long long)func2hook) + curr_overWriteLen);
 
     fprintf(ofp, "first few bytes: ");
@@ -235,16 +190,12 @@ HANDLE WINAPI DetourCreateFileW(
     DWORD                 dwFlagsAndAttributes,
     HANDLE                hTemplateFile) {
 
-    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
     HANDLE ret = fpCreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 
     char pathBuf[1024];
     wcstombs(pathBuf, (const wchar_t*)lpFileName, 1024);
     printf("[fCreateW] handle: %d, name: %s\n", ret, pathBuf);
     fprintf(ofp, "[fCreateW] handle: %d, name: %s\n", ret, pathBuf);
-
-    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     return ret;
 }
@@ -268,7 +219,6 @@ HFILE WINAPI DetourOpenFile(
     fprintf(ofp, "[fOpen] handle: %d, name: %s\n", ret, pathBuf);
     fflush(stdout);
     fflush(ofp);
-    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     return ret;
 }
@@ -297,18 +247,12 @@ bool WINAPI DetourReadFile(
 
     const auto lpBufOld = lpBuffer;
 
-    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-
     const auto ret = fpReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
 
     printf("[fRead]: handle: %d, size: %d, offset: %lld, bytes: %016llx\n", hFile, nNumberOfBytesToRead, pos.QuadPart, *reinterpret_cast<uint64_t*>(lpBufOld));
     fprintf(ofp, "[fRead]: handle: %d, size: %d, offset: %lld, bytes: %016llx\n", hFile, nNumberOfBytesToRead, pos.QuadPart, *reinterpret_cast<uint64_t*>(lpBufOld));
     fflush(stdout);
     fflush(ofp);
-
-
-    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     return ret;
 }
@@ -328,8 +272,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD ul_reason_for_call, LPVOID lpvRese
         }
         ofp = fopen(buf, "wb");
         write_new_file_pointer(ofp);
-        //InstallHook(GetFunc2HookAddr(), doNothing);
-        //InstallHook(GetFunc2HookAddr(), do_thing, (uint64_t*)&return_jump_addr);
         InstallHook(GetFunc2HookAddr(), hook_decrypt_func_under_xor, (uint64_t*)&return_jump_addr);
         
 
@@ -368,9 +310,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD ul_reason_for_call, LPVOID lpvRese
             printf("enabling hook on createFileW failed\n");
             return false;
         }
-
-        //MH_Uninitialize();
-        //fclose(ofp);
     }
     return true;
 }

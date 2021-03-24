@@ -7,14 +7,8 @@ sdata SEGMENT read write shared
 return_jump_addr dq 0
 file_pointer dq 0
 
-reg_backup:
-;array; db ;2048; dup(?)
-;BYTE "loliloliloliloliloliloliloliloliloliloliloliloliloliloliloliloliloliloliloliloliloli",0
 format:
 BYTE "[decrypt] string: %s, bytes: %016llx",13,10,0 ;str,cr,lf,null
-formathello:
-BYTE "working",0
-
 sdata ends
 
 
@@ -31,6 +25,7 @@ write_new_ret_addr proc
 write_new_ret_addr endp
 
 hook_decrypt_func_under_xor proc
+	;save every register to avoid annoying bugs later
 	push rax
 	push rbx
 	push rcx
@@ -55,25 +50,22 @@ hook_decrypt_func_under_xor proc
 	mov r8, [rbx+88h]	;get data ptr
 	mov r8, [r8]		;get first 8 bytes of data
 
-	push rdx
-	push r8
+	;save values, since these registers are volatile
+	push rdx			;hash string ptr
+	push r8				;first bytes
 
 	;do printf
 	mov rcx, format		;setup format string
 	;					;first arg (hash string) is in rdx
 	;					;second arg (first 8 bytes) is in r8
 	mov al, 2			;tell it we're using 2 arguments
-	sub rsp, 32
+	sub rsp, 32			;add shadowspace
 	call printf
-	add rsp, 32
+	add rsp, 32			;remove shadowspace
 
-	pop r9
-	pop r8
-
-	;get values again (as registers were destroyed by printf)
-	;mov r8, [r15+98h]	;get hash string ptr
-	;mov r9, [r8+88h]	;get data ptr
-	;mov r9, [r9]		;get first 8 bytes of data
+	;grab our values back from the stack
+	pop r9				;first bytes
+	pop r8				;hash string ptr
 
 	;do printf
 	mov rcx, file_pointer
@@ -81,13 +73,13 @@ hook_decrypt_func_under_xor proc
 	;					;first arg (hash string) is in r8
 	;					;second arg (first 8 bytes) is in r9
 	mov al, 2			;set arg count again, as it was destroyed too
-	sub rsp, 32
+	sub rsp, 32			;add shadowspace
 	call fprintf
-	add rsp, 32
+	add rsp, 32			;remove shadowspace
 
 
 
-	
+	;move back registers that we saved
 	pop r15
 	pop r14
 	pop r13
@@ -107,9 +99,10 @@ hook_decrypt_func_under_xor proc
 	;execute overwritten instruction
 	mov edi, [rbx+90h]
 
-	jmp return_jump_addr
+	jmp return_jump_addr ;since the patch function does a long jump here, we shouldn't ret
 hook_decrypt_func_under_xor endp
 
+;kinda useless now
 hook_decrypt_func_on_keyload proc
 	push rax
 	push rbx
@@ -173,6 +166,8 @@ hook_decrypt_func_on_keyload proc
 	jmp return_jump_addr
 hook_decrypt_func_on_keyload endp
 
+
+;also kinda useless
 do_thing proc
 	push rax
 	push rbx
@@ -254,56 +249,4 @@ do_thing proc
 	jmp return_jump_addr
 do_thing endp
 
-
-
-
-
-; backup rax, then rcx, then do the rest
-backup_rax proc
-mov rax, rax
-ret
-backup_rax endp
-
-backup_rcx proc
-mov rax, rcx
-ret
-backup_rcx endp
-
-backup_rest proc
-mov rax, [rsp+69h]
-mov [rcx], rax
-mov [rcx+8], rdi
-ret
-backup_rest endp
-
-read_reg_rsp proc
-mov rax, rsp
-ret
-read_reg_rsp endp
-
-get_correct_rbp proc
-lea rax, QWORD PTR [rsp-91C0h]
-ret
-get_correct_rbp endp
-
-read_reg_rax proc
-mov rax, rax
-ret
-read_reg_rax endp
-
-read_reg_rbx proc
-mov rax, rbx
-ret
-read_reg_rbx endp
-
-read_reg_rcx proc
-mov rax, rcx
-ret
-read_reg_rcx endp
-
-read_reg_rdx proc
-mov rax, rdx
-ret
-read_reg_rdx endp
-
-end
+END
