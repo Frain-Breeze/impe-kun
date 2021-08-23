@@ -1,0 +1,87 @@
+LittleEndian();
+uint32 a; //should be 0x14
+
+struct {
+    FSeek(24);
+    uint32 datablock_size; //maybe?
+    FSeek(40);
+    uint32 hdr1count <fgcolor=cBlack,bgcolor=cWhite>;
+} header;
+FSeek(44);
+
+struct {
+	uint32 start_offset <fgcolor=cWhite,bgcolor=cGreen>;
+    uint32 body_entry_size <fgcolor=cWhite,bgcolor=cGreen>;
+    uchar a[80-8] <fgcolor=cWhite,bgcolor=cBlack>;
+}hdr1[header.hdr1count];
+FSkip(20);
+
+
+
+
+struct ent1expanded{
+    uint32 unkk[4];
+    uint32 connect_size;
+    uint32 connect_offset_end; //from beginning header
+    uint32 idk;
+    uint32 empty;
+
+    
+    local int32 last = -1;
+    local int32 length = 0;
+	
+	local int32 biggest = 0;
+    
+    local char isBig = false;
+    local int32 divident = 2;
+    if(ReadUInt() == 0) { isBig = true; divident = 4;}
+    
+
+    struct{
+        struct{
+            if(isBig){ uint32 a <fgcolor=cGreen>; }
+            else { uint16 a <fgcolor=cGreen>; }
+            //if(a == last) {
+                //Printf("index group with length %d\n", length);
+            //    length = 0;
+            //}
+            //length+=1;
+            //last = a;
+		    
+		    if(a > biggest) { biggest = a; }
+            //uint16 b <fgcolor=cGreen>;
+        } connect[connect_size / divident] <optimize=false>;
+    } connects;
+    
+	
+	Printf("biggest: %d\n", biggest);
+	
+	while((FTell() % 16) != 0) { FSkip(1); }
+	
+	struct {
+		float x <fgcolor=cRed>;
+		float y <fgcolor=cGreen>;
+		float z <fgcolor=cBlue>;
+		//float a;
+		//float b;
+	}verts[biggest + 1];
+
+    struct {
+        float a;
+        float b;
+        float c;
+    }sphere[biggest + 1];
+
+    struct {
+        float u;
+        float v;
+    }uvs[biggest + 1];
+};
+
+struct {
+	local int i = 0;
+	for(i = 0; i < header.hdr1count; i++){
+		FSeek(hdr1[i].start_offset + 32);
+		ent1expanded exp;
+	}
+} body;

@@ -12,14 +12,11 @@ static uint64_t defKey3 = 0x5851f42d4c957f2d;
 uint64_t new_decrypt() {
 	uint64_t key = defKey3;
 	uint32_t multiplier = 0x3E;
-
-
-
-
 	return 0;
 }
 
 uint64_t weird(uint64_t _pointer, uint8_t _in, uint8_t* _array, uint8_t* _data) {
+	//FNV1a hash?
 	uint64_t key = 0xCBF29CE484222325;
 	uint64_t multiplier = 0x100000001B3;
 
@@ -90,6 +87,20 @@ uint64_t decryptBuffer(uint8_t* _in, uint8_t* _out, uint64_t key, size_t _size) 
 		key += _in[i];
 		key *= 141;
 		_out[i] = _in[i] ^ xormask;
+	}
+
+	return key;
+}
+
+uint64_t encryptBuffer(uint8_t* _in, uint8_t* _out, uint64_t key, size_t _size) {
+	assert(_in);
+	assert(_out);
+
+	for (size_t i = 0; i < _size; i++) {
+		uint8_t xormask = key >> (i & 0x1F); //key shifted by i mod 32
+		_out[i] = _in[i] ^ xormask;
+		key += _out[i];
+		key *= 141;
 	}
 
 	return key;

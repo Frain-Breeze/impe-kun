@@ -1,0 +1,45 @@
+LittleEndian();
+uint32 a;
+FSeek(28);
+uint32 offset_lastpart;
+FSeek(32);
+uint32 size1;
+uint32 size2;
+uint32 offset_beforedatheader;
+FSeek(76);
+uint32 offset_datheader;
+uint32 offset_eof;
+
+FSeek(108);
+struct {
+    uint32 structsize; //maybe?
+    uchar a[structsize - 4];
+}firsttable [size1];
+struct {
+    uint32 structsize; //maybe?
+    uint32 idk;
+    uint32 id2;
+    
+}secondtable[size2];
+
+FSeek(offset_datheader);
+struct {
+    uint32 offset_pixeldata;
+    uint32 byteSize;
+    uint32 idk2;
+    uint32 width;
+    uint32 height;
+    //uint32 idk3; //actually part of struct?
+    FSeek(offset_pixeldata);
+    struct {
+        uchar B;
+        uchar G;
+        uchar R;
+        uchar A;
+    }pixels[width*height];
+} datheader;
+
+FSeek(offset_lastpart);
+struct {
+    
+} lastpart;

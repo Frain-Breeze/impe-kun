@@ -1,0 +1,20 @@
+LittleEndian();
+uint32 magic; //0x28
+FSeek(60-4);
+uint32 entryCount;
+struct {
+    uint32 offset <fgcolor=cWhite,bgcolor=cGreen>;
+    uchar idk[8] <fgcolor=cWhite,bgcolor=cBlack>;
+    
+} entries[entryCount];
+
+local int i = 0;
+for(i = 0; i < entryCount; i++){
+    FSeek(entries[i].offset + 48);
+    //while((FTell() % 16) != 0){
+        //FSkip(1);
+    //    break;
+    //}
+    struct {
+    }a;
+}
