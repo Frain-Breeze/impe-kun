@@ -1,45 +1,84 @@
 LittleEndian();
-uint32 a;
-FSeek(28);
-uint32 offset_lastpart;
-FSeek(32);
-uint32 size1;
-uint32 size2;
-uint32 offset_beforedatheader;
-FSeek(76);
-uint32 offset_datheader;
-uint32 offset_eof;
 
-FSeek(108);
-struct {
-    uint32 structsize; //maybe?
-    uchar a[structsize - 4];
-}firsttable [size1];
-struct {
-    uint32 structsize; //maybe?
-    uint32 idk;
-    uint32 id2;
-    
-}secondtable[size2];
+struct Entry_data(int offset) {
+	local int offs = FTell();
+	FSeek(FTell() + 32 + 16);
+	uint32 size;
+	FSeek(FTell() + 12);
+	//TODO: continue
+};
 
-FSeek(offset_datheader);
-struct {
-    uint32 offset_pixeldata;
-    uint32 byteSize;
-    uint32 idk2;
-    uint32 width;
-    uint32 height;
-    //uint32 idk3; //actually part of struct?
-    FSeek(offset_pixeldata);
-    struct {
-        uchar B;
-        uchar G;
-        uchar R;
-        uchar A;
-    }pixels[width*height];
-} datheader;
+struct Entry {
+	uint32 data_offset;
+	uchar unk[80-4];
+	Entry_data data(data_offset) <optimize=false>;
+};
 
-FSeek(offset_lastpart);
-struct {
-    
-} lastpart;
+uint32 magic;
+if(magic != 0x14) { Assert(false, "magic should be 0x14!"); }
+
+FSeek(24);
+uint32 size_of_curr_module;
+
+FSeek(40);
+uint32 entry_count;
+Entry entries[entry_count] <optimize=false>;
+
+
+
+/*while(!FEof()) {
+    sof = FTell();
+    uint32 type_or_something;
+    if(type_or_something == 0x14) {
+        uchar unk[20];
+        uint32 data_len;
+        uint32 unk2;
+        //uchar data[data_len];
+    }
+    else {
+        FSeek(sof + 28);
+        uint32 offset_lastpart;
+        FSeek(sof + 32);
+        uint32 size1;
+        uint32 size2;
+        uint32 offset_beforedatheader;
+        FSeek(sof + 76);
+        uint32 offset_datheader;
+        uint32 offset_eof;
+        
+        FSeek(sof + 108);
+        struct {
+            uint32 structsize; //maybe?
+            uchar a[structsize - 4];
+        }firsttable [size1];
+        struct {
+            uint32 structsize; //maybe?
+            uint32 idk;
+            uint32 id2;
+            
+        }secondtable[size2];
+        
+        FSeek(offset_datheader);
+        struct {
+            uint32 offset_pixeldata;
+            uint32 byteSize;
+            uint32 idk2;
+            uint32 width;
+            uint32 height;
+            //uint32 idk3; //actually part of struct?
+            FSeek(offset_pixeldata);
+            struct {
+                uchar B;
+                uchar G;
+                uchar R;
+                uchar A;
+            }pixels[width*height];
+        } datheader;
+        
+        FSeek(offset_lastpart);
+        struct {
+            
+        } lastpart;
+    }
+}
+*/

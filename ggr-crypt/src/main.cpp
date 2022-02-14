@@ -26,39 +26,6 @@ int modInverse(int a, int m) {
 	return -1;
 }
 
-/*void nvm() {
-
-	int64_t* plVar1, *plVar4, *plVar5, *plVar6, *param_3;
-	int64_t* par3and = plVar4;
-
-	plVar4 = (int64_t*)((uint64_t)param_3 | 0xf);
-	plVar6 = (int64_t*)0x7fffffffffffffff;
-	if (((plVar4 < (int64_t*)0x8000000000000000) &&
-		(plVar1 <= (int64_t*)(0x7fffffffffffffff - ((uint64_t)plVar1 >> 1)))) &&
-		(plVar5 = (int64_t*)(((uint64_t)plVar1 >> 1) + (int64_t)plVar1), plVar6 = plVar4, plVar4 < plVar5)) {
-
-		plVar6 = plVar5;
-	}
-	static_assert(sizeof(uint64_t) == 8, "");
-
-	par3and = (int64_t*)((uint64_t)param_3 | 0xF);
-	plVar6 = (int64_t*)0x7fffffffffffffff;
-	//if(true && )
-}*/
-
-/*
-
-    plVar4 = (longlong *)((ulonglong)param_3 | 0xf);
-    plVar6 = (longlong *)0x7fffffffffffffff;
-    if (((plVar4 < (longlong *)0x8000000000000000) &&
-		(plVar1 <= (longlong *)(0x7fffffffffffffff - ((ulonglong)plVar1 >> 1)))) &&
-		(plVar5 = (longlong *)(((ulonglong)plVar1 >> 1) + (longlong)plVar1), plVar6 = plVar4, plVar4 < plVar5)) {
-
-		plVar6 = plVar5;
-    }
-
-*/
-
 int main(int argc, char* argv[]) {
 
 	printf("usage:\n"
@@ -114,6 +81,55 @@ int main(int argc, char* argv[]) {
 			uint64_t key2 = calculateKeyFromName(argv[2], defKey2);
 			printf("key1: %08lx, key2: %08lx\n", key1, key2);
 			return 0;
+		}
+		else if ((std::string)argv[1] == "match_name") {
+			if(argc == 4) {
+				//2 = json file
+				//3 = name to match
+
+				std::ifstream jin(argv[2]);
+				json js;
+				jin >> js;
+				jin.close();
+
+				uint64_t key1 = calculateKeyFromName(argv[3], defKey1);
+				uint64_t key2 = calculateKeyFromName(argv[3], defKey2);
+
+				std::function<void(json&, fs::path)> search_json = [&search_json, &key2, &argv](json& jsobj, fs::path curr_path) -> void {
+					if (jsobj.is_object()) {
+						for(const auto& e : jsobj.items()) {
+							if (e.key() == "keys") {
+								for (const auto& a : e.value().items()) {
+									uint64_t tmp = 0;
+									if (sscanf(a.value()["key"].get<std::string>().c_str(), "%08llx", &tmp) == 1) {
+										if ((tmp & 0xFFFFFFFF) == (key2 & 0xFFFFFFFF)) {
+											printf("found %08llx with key offset %d and size %d\n", key2 & 0xFFFFFFFF, a.value()["offset"].get<int>(), a.value()["size"].get<int>());
+											a.value()["keyName"] = argv[3];
+											//printf("found key %s with offset %d and size %d\n", a.value()["key"].get<std::string>().c_str(), a.value()["offset"].get<int>(), a.value()["size"].get<int>());
+										}
+									}
+								}
+							}
+							else if (e.key() == "humanName") {
+								//printf("name: %s\n", e.value().get<std::string>().c_str());
+							}
+							else if (e.key() == "encryptKey") {
+								//printf("encryptkey: %s\n", e.value().get<std::string>().c_str());
+							}
+							else {
+								//printf("\n");
+								search_json(e.value(), curr_path / e.key());
+							}
+							continue;
+						}
+					}
+				};
+				search_json(js, "");
+
+				std::ofstream jon(argv[2]);
+				jon << js.dump(4);
+				jon.close();
+			}
 		}
 		else if ((std::string)argv[1] == "dec_all") {
 			if(argc == 5){
@@ -222,10 +238,12 @@ int main(int argc, char* argv[]) {
 							else {
 								std::string name = e.key();
 								if (e.value().contains("humanName")) {
-									name += "__";
+									//name += "__";
+									name = "";
 									name += e.value()["humanName"].get<std::string>();
 								}
 								if (e.key() == "c4f76749") {
+									printf("skipping c4f76749\n\n\n");
 									continue;
 								}
 								std::cout << in_path << "\n";
